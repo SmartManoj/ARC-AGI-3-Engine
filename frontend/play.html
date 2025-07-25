@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARC-AGI-3 Game Player</title>
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .game-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            color: white;
+        }
+        
+        .game-layout {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            align-items: start;
+        }
+        
+        .game-board-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .game-board {
+            width: 100%;
+            max-width: 512px;
+            height: 512px;
+            margin: 0 auto;
+            display: block;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+        
+        .controls-panel {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            height: fit-content;
+        }
+        
+        .score-display {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .score-display h3 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .score-value {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+        
+        .state-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .state-win {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .state-game-over {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .action-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        
+        .action-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .action-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .control-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .control-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .control-btn:hover {
+            background: #5a6268;
+        }
+        
+        .control-btn.primary {
+            background: #28a745;
+        }
+        
+        .control-btn.primary:hover {
+            background: #218838;
+        }
+        
+        .status-message {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 8px;
+            transition: background 0.2s ease;
+        }
+        
+        .back-link:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .instructions {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .integration-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #1565c0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        /* Win Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .modal-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .win-modal {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            transform: scale(0.7);
+            transition: transform 0.3s ease;
+        }
+        
+        .modal-overlay.show .win-modal {
+            transform: scale(1);
+        }
+        
+        .win-modal h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .win-modal .score-info {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .win-modal .modal-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .modal-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .modal-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .modal-btn.primary {
+            background: #28a745;
+            border-color: #28a745;
+        }
+        
+        .modal-btn.primary:hover {
+            background: #218838;
+            border-color: #218838;
+        }
+        
+        .celebration {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .game-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .game-board {
+                max-width: 100%;
+                height: auto;
+                aspect-ratio: 1;
+            }
+            
+            .win-modal {
+                padding: 30px 20px;
+            }
+            
+            .win-modal h2 {
+                font-size: 2rem;
+            }
+            
+            .modal-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to Games</a>
+        
+        <div class="header">
+            <h1>🎮 <span id="gameTitle">Loading...</span></h1>
+            <div class="game-info">
+                <strong>Game ID:</strong> <span id="gameId">Loading...</span>
+            </div>
+        </div>
+        
+        <div class="game-layout">
+            <div class="game-board-container">
+                <canvas id="gameBoard" class="game-board"></canvas>
+            </div>
+            
+            <div class="controls-panel">
+                <div class="integration-info">
+                    <strong>🚀 API Server Integration</strong><br>
+                    This game connects to the backend API server for game processing.
+                </div>
+                
+                <div class="score-display">
+                    <h3>Score</h3>
+                    <div class="score-value" id="score">0</div>
+
+                </div>
+                
+                <div class="state-display" id="stateDisplay">
+                    <strong>State:</strong> <span id="gameState">NOT_FINISHED</span>
+                </div>
+                
+                <div class="status-message" id="statusMessage" style="display: none;"></div>
+                
+                <div class="instructions">
+                    <strong>How to play:</strong><br>
+                    • Game starts automatically when page loads<br>
+                    • Click on the game board to place tiles<br>
+                    • Use action buttons for simple actions<br>
+                    • Discover the game rules through play<br>
+                    • Use keyboard shortcuts (1-6, R for reset)
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="action-btn" onclick="executeAction('action1')">Action 1</button>
+                    <button class="action-btn" onclick="executeAction('action2')">Action 2</button>
+                    <button class="action-btn" onclick="executeAction('action3')">Action 3</button>
+                    <button class="action-btn" onclick="executeAction('action4')">Action 4</button>
+                    <button class="action-btn" onclick="executeAction('action5')">Action 5</button>
+                    <button class="action-btn" onclick="executeAction('action6')">Action 6</button>
+                </div>
+                
+                <div class="control-buttons">
+                    <button class="control-btn primary" onclick="startGame()" id="startButton">Start Game</button>
+                    <button class="control-btn" onclick="resetGame()">Reset Game</button>
+                    <button class="control-btn" onclick="viewScorecard()" id="scorecardButton">View Scorecard</button>
+                </div>
+                
+                <div class="loading" id="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <p>Processing...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Win Modal -->
+    <div class="modal-overlay" id="winModal">
+        <div class="win-modal">
+            <div class="celebration">🎉</div>
+            <h2>Congratulations!</h2>
+            <div class="score-info">
+                <div>You Won!</div>
+                <div>Final Score: <span id="modalScore">0</span></div>
+
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" onclick="playAgain()">Play Again</button>
+                <button class="modal-btn" onclick="viewScorecard()">View Scorecard</button>
+                <button class="modal-btn" onclick="closeWinModal()">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE_URL = "http://localhost:3193/api";
+        const API_KEY = "test-api-key-12345";
+        
+        // Get game ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('game') || 'ft09-16726c5b26ff';
+        
+        let gameSession = null;
+        let scorecardId = null;
+        
+        const canvas = document.getElementById('gameBoard');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        const gameStateElement = document.getElementById('gameState');
+        const stateDisplay = document.getElementById('stateDisplay');
+        const statusMessage = document.getElementById('statusMessage');
+        const loading = document.getElementById('loading');
+
+        const gameTitleElement = document.getElementById('gameTitle');
+        const gameIdElement = document.getElementById('gameId');
+        const winModal = document.getElementById('winModal');
+        const modalScore = document.getElementById('modalScore');
+        
+        // Set canvas size
+        canvas.width = 512;
+        canvas.height = 512;
+        
+        // Color map for rendering
+        const key_colors = {
+            0: "#FFFFFF",
+            1: "#CCCCCC",
+            2: "#999999",
+            3: "#666666",
+            4: "#333333",
+            5: "#000000",
+            6: "#E53AA3",
+            7: "#FF7BCC",
+            8: "#F93C31",
+            9: "#1E93FF",
+            10: "#88D8F1",
+            11: "#FFDC00",
+            12: "#FF851B",
+            13: "#921231",
+            14: "#4FCC30",
+            15: "#A356D6"
+        };
+        
+        // Update game info
+        gameTitleElement.textContent = gameId.replace('-', ' ').replace(/([A-Z])/g, ' $1').trim();
+        gameIdElement.textContent = gameId;
+        
+        function showStatus(message, type = 'info') {
+            statusMessage.textContent = message;
+            statusMessage.style.display = 'block';
+            statusMessage.className = `status-message status-${type}`;
+            setTimeout(() => {
+                statusMessage.style.display = 'none';
+            }, 4000);
+        }
+        
+        function showLoading(show) {
+            loading.style.display = show ? 'block' : 'none';
+        }
+        
+        function updateGameState(state, score) {
+            gameStateElement.textContent = state;
+            scoreElement.textContent = score;
+            
+            
+            stateDisplay.className = 'state-display';
+            if (state === 'WIN') {
+                stateDisplay.classList.add('state-win');
+                showStatus('🎉 Congratulations! You won!', 'success');
+                showWinModal(score);
+            } else if (state === 'GAME_OVER') {
+                stateDisplay.classList.add('state-game-over');
+                showStatus('💀 Game Over!', 'error');
+            }
+        }
+        
+        function showWinModal(score) {
+            modalScore.textContent = score;
+            winModal.classList.add('show');
+        }
+        
+        function closeWinModal() {
+            winModal.classList.remove('show');
+        }
+        
+        function playAgain() {
+            closeWinModal();
+            resetGame();
+        }
+        
+        function renderGrid(canvas, gridData, colorMap) {
+            if (!Array.isArray(gridData) || gridData.length === 0) {
+                return;
+            }
+
+            const rows = gridData.length;
+            const cols = gridData[0].length;
+            
+            const displaySize = 512;
+            const ratio = window.devicePixelRatio || 1;
+
+            canvas.style.width = displaySize + 'px';
+            canvas.style.height = displaySize + 'px';
+            canvas.width = displaySize * ratio;
+            canvas.height = displaySize * ratio;
+
+            const ctx = canvas.getContext('2d');
+            ctx.scale(ratio, ratio);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const cellSize = displaySize / cols;
+            
+            // Draw grid cells first (background)
+            for (let i = 0; i < rows; i++) {
+                for (let j = 0; j < cols; j++) {
+                    const cell = gridData[i][j];
+                    const color = colorMap[cell] || '#888888';
+                    
+                    ctx.fillStyle = color;
+                    ctx.fillRect(j * cellSize, i * cellSize, cellSize, cellSize);
+                }
+            }
+            
+            // Draw internal grid lines
+            ctx.lineWidth = 0.5;
+            ctx.strokeStyle = '#49494988';
+            ctx.beginPath();
+            
+            // Vertical lines
+            for (let j = 0; j < cols; j++) {
+                const x = j * cellSize;
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height / ratio);
+            }
+
+            // Horizontal lines
+            for (let i = 1; i < rows; i++) {
+                const y = i * cellSize;
+                ctx.moveTo(0, y);
+                ctx.lineTo(displaySize, y);
+            }
+            ctx.stroke();
+        }
+        
+        function renderFrame(frameData) {
+            if (!frameData || !frameData[0]) return;
+            renderGrid(canvas, frameData[0], key_colors);
+        }
+        
+        async function openScorecard() {
+            try {
+                showLoading(true);
+                showStatus('Opening scorecard...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/scorecard/open`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        source_url: window.location.href,
+                        tags: ['web-player', gameId],
+                        opaque: {
+                            game_id: gameId,
+                            timestamp: new Date().toISOString()
+                        }
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    scorecardId = result.card_id;
+                    
+                    // Store scorecard ID in localStorage
+                    localStorage.setItem('scorecard-store', JSON.stringify({
+                        card_id: scorecardId,
+                        game_id: gameId,
+                        created_at: new Date().toISOString(),
+                        source_url: window.location.href
+                    }));
+                    
+                    showStatus('Scorecard opened successfully!', 'success');
+                    return scorecardId;
+                } else {
+                    const errorData = await response.json();
+                    showStatus(errorData.detail || 'Failed to open scorecard', 'error');
+                    return null;
+                }
+            } catch (error) {
+                showStatus('Error opening scorecard: ' + error.message, 'error');
+                return null;
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function openScorecardAndStartGame() {
+            // First open scorecard
+            const cardId = await openScorecard();
+            if (cardId) {
+                // Then start the game
+                await startGame();
+            }
+        }
+        
+        async function startGame() {
+            try {
+                showLoading(true);
+                showStatus('Starting game with API server...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/cmd/RESET`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        game_id: gameId,
+                        card_id: scorecardId
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    gameSession = result;
+                    renderFrame(result.frame);
+                    updateGameState(result.state, result.score);
+                    updateStartButton(true);
+                    showStatus('Game started successfully!', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showStatus(errorData.detail || 'Failed to start game', 'error');
+                }
+            } catch (error) {
+                showStatus('Error starting game: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        function updateStartButton(started) {
+            const startButton = document.getElementById('startButton');
+            if (started) {
+                startButton.textContent = 'Game Started';
+                startButton.disabled = true;
+                startButton.style.opacity = '0.6';
+            } else {
+                startButton.textContent = 'Start Game';
+                startButton.disabled = false;
+                startButton.style.opacity = '1';
+            }
+        }
+        
+        async function executeAction(actionType, x = null, y = null) {
+            if (!gameSession) {
+                showStatus('Please start a game first', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                let endpoint = '';
+                let requestBody = {
+                    game_id: gameId,
+                    guid: gameSession.guid
+                };
+                
+                switch(actionType) {
+                    case 'action1':
+                        endpoint = '/cmd/ACTION1';
+                        break;
+                    case 'action2':
+                        endpoint = '/cmd/ACTION2';
+                        break;
+                    case 'action3':
+                        endpoint = '/cmd/ACTION3';
+                        break;
+                    case 'action4':
+                        endpoint = '/cmd/ACTION4';
+                        break;
+                    case 'action5':
+                        endpoint = '/cmd/ACTION5';
+                        break;
+                    case 'action6':
+                        endpoint = '/cmd/ACTION6';
+                        if (x !== null && y !== null) {
+                            requestBody.x = x;
+                            requestBody.y = y;
+                        }
+                        break;
+                    default:
+                        showStatus('Unknown action type', 'error');
+                        return;
+                }
+                
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    renderFrame(result.frame);
+                    updateGameState(result.state, result.score);
+                    
+                    if (result.state === 'WIN') {
+                        showStatus('🎉 You won!', 'success');
+                    } else if (result.state === 'GAME_OVER') {
+                        showStatus('💀 Game Over!', 'error');
+                    } else {
+                        showStatus('Action executed successfully', 'success');
+                    }
+                } else {
+                    const errorData = await response.json();
+                    showStatus(errorData.detail || 'Action failed', 'error');
+                }
+            } catch (error) {
+                showStatus('Error executing action: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function resetGame() {
+            if (!gameSession) {
+                showStatus('No active game to reset', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                showStatus('Resetting game...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/cmd/RESET`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_KEY
+                    },
+                    body: JSON.stringify({
+                        game_id: gameId,
+                        card_id: scorecardId,
+                        guid: gameSession.guid
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    gameSession = result;
+                    renderFrame(result.frame);
+                    updateGameState(result.state, result.score);
+                    updateStartButton(true);
+                    showStatus('Game reset successfully!', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showStatus(errorData.detail || 'Failed to reset game', 'error');
+                }
+            } catch (error) {
+                showStatus('Error resetting game: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function viewScorecard() {
+            if (!scorecardId) {
+                showStatus('No scorecard available', 'error');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                showStatus('Loading scorecard...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/scorecard/${scorecardId}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-API-Key': API_KEY
+                    }
+                });
+                
+                if (response.ok) {
+                    const scorecard = await response.json();
+                    
+                    // Display scorecard info
+                    const info = `Scorecard ID: ${scorecard.card_id}\n` +
+                               `Games Played: ${scorecard.played}\n` +
+                               `Games Won: ${scorecard.won}\n` +
+                               `Total Actions: ${scorecard.total_actions}\n` +
+                               `Score: ${scorecard.score}`;
+                    
+                    alert('Scorecard Information:\n\n' + info);
+                    showStatus('Scorecard loaded successfully!', 'success');
+                } else {
+                    const errorData = await response.json();
+                    showStatus(errorData.detail || 'Failed to load scorecard', 'error');
+                }
+            } catch (error) {
+                showStatus('Error loading scorecard: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Handle canvas clicks
+        canvas.addEventListener('click', (event) => {
+            if (!gameSession) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const displaySize = 512; // Actual display size
+            const x = Math.floor((event.clientX - rect.left) / (displaySize / 64));
+            const y = Math.floor((event.clientY - rect.top) / (displaySize / 64));
+            
+            if (x >= 0 && x < 64 && y >= 0 && y < 64) {
+                executeAction('action6', x, y);
+            }
+        });
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (event) => {
+            if (!gameSession) return;
+            
+            switch(event.key) {
+                case '1':
+                    executeAction('action1');
+                    break;
+                case '2':
+                    executeAction('action2');
+                    break;
+                case '3':
+                    executeAction('action3');
+                    break;
+                case '4':
+                    executeAction('action4');
+                    break;
+                case '5':
+                    executeAction('action5');
+                    break;
+                case '6':
+                    executeAction('action6');
+                    break;
+                case 'r':
+                case 'R':
+                    resetGame();
+                    break;
+            }
+        });
+        
+        // Check for existing scorecard in localStorage and verify it exists on server
+        async function checkExistingScorecard() {
+            const stored = localStorage.getItem('scorecard-store');
+            if (stored) {
+                try {
+                    const scorecardData = JSON.parse(stored);
+                    if (scorecardData.game_id === gameId) {
+                        // Verify the scorecard exists on the server
+                        try {
+                            const response = await fetch(`${API_BASE_URL}/scorecard/${scorecardData.card_id}`, {
+                                method: 'GET',
+                                headers: {
+                                    'X-API-Key': API_KEY
+                                }
+                            });
+                            
+                            if (response.ok) {
+                                scorecardId = scorecardData.card_id;
+                                showStatus('Restored existing scorecard: ' + scorecardId, 'info');
+                                return true;
+                            } else {
+                                // Scorecard doesn't exist on server, remove from localStorage
+                                localStorage.removeItem('scorecard-store');
+                                showStatus('Stored scorecard not found on server, creating new one...', 'info');
+                                return false;
+                            }
+                        } catch (error) {
+                            console.error('Error checking scorecard on server:', error);
+                            // If we can't check, assume it doesn't exist and create new one
+                            localStorage.removeItem('scorecard-store');
+                            showStatus('Error checking scorecard, creating new one...', 'info');
+                            return false;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error parsing stored scorecard:', error);
+                    localStorage.removeItem('scorecard-store');
+                }
+            }
+            return false;
+        }
+        
+        // Auto-start the game when page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            const hasExistingScorecard = await checkExistingScorecard();
+            if (hasExistingScorecard) {
+                showStatus('Starting game with existing scorecard...', 'info');
+                setTimeout(() => {
+                    startGame();
+                }, 100);
+            } else {
+                showStatus('Opening new scorecard and starting game...', 'info');
+                setTimeout(() => {
+                    openScorecardAndStartGame();
+                }, 100);
+            }
+        });
+        
+        // Initialize with a sample frame
+        const sampleFrame = Array(64).fill().map(() => Array(64).fill(0));
+        renderFrame([sampleFrame]);
+    </script>
+</body>
+</html> 
