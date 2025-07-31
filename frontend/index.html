@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ARC-AGI-3 Web Player</title>
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
     <style>
         * {
             margin: 0;
@@ -188,8 +187,8 @@
     </div>
     
     <script>
-        const API_BASE_URL = "http://localhost:3193/api";
-        const API_KEY = "test-api-key-12345";
+        const API_BASE_URL = localStorage.getItem("API_BASE_URL") || "http://localhost:3193/api";
+        const API_KEY = localStorage.getItem("API_KEY") || "test-api-key-12345";
         
         function showStatus(message, isError = false) {
             const status = document.getElementById('status');
